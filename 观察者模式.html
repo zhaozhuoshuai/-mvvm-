@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+	</head>
+	<body>
+		<script type="text/javascript">
+			// 观察者
+			function f1() { console.log("f1在观察")}
+			let f2 = ()=>{console.log("f2在观察")}
+			let f3 = function(){console.log("f3在观察")}
+			//定义事件构造器(事件中心)
+			function shijian () {
+				//给对象添加属性
+				this.obj={
+					"wuhan":[]
+				}
+			}
+			//给指定事件添加观察者
+			shijian.prototype.$on=function(shijianming,guanchazhe){
+				//取出当前事件的所有观察者
+				var arr = this.obj[shijianming]
+				//判断事件有没有属性
+				if(!arr){
+					// 没有就添加一个空数组
+					this.obj[shijianming]=[]
+					//然后再去添加观察者
+					this.obj[shijianming].push(guanchazhe)
+				}else{
+					//否则把观察者添加到这个数组中
+					arr.push(guanchazhe)
+				}
+			}
+			//发布一个事件
+			//
+			shijian.prototype.emit=function(eventName){
+				var arr = this.obj[eventName];
+				arr.forEach(item=>{
+					item()
+				})
+			}
+			// 创建一个对象
+			var ec = new shijian()
+			
+			
+			
+		</script>
+	</body>
+</html>

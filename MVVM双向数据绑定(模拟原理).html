@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+	</head>
+	<body>
+		<div id="app">
+			<h3>{{salary}}</h3>
+			<h2>{{salary}}</h2>
+			<input type="text" v-model="salary" />
+		</div>
+		<script type="text/javascript">
+			//定义一个构造器(事件中心)
+			function EventCenter (){
+				this.eCenter={}
+			}
+			//给指定事件添加观察者
+			EventCenter.prototype.addListener=function(eventName,callback){
+				//取出当前事件中心,监视这个事件的所有观察者
+				var arr = this.eCenter[eventName]
+				//判断arr里有没有值
+				if(!arr){
+					//没有值就添加一个属性,值就是空数组
+					this.eCenter[eventName]=[]
+					//然后再添加观察者
+					this.eCenter[eventName].push(callback)
+				}else{
+					//否则把callback添加到这个数组中
+					arr.push(callback)
+				}
+			}
+			//发布一个事件,当某个事件发生时,去循环调用所有对应观察者
+			EventCenter.prototype.emit=function(eventName){
+				//取出事件中心,当前事件的所有观察者,循环执行
+				var arr = this.eCenter[eventName];
+				//判断arr
+				if(arr){
+					arr.forEach(item=>{
+						item()
+					})
+				}	
+			}
+		</script>
+		<script type="text/javascript">
+			//创建一个观察者
+			var ec = new EventCenter()
+			//创建一个基本的构造器
+			//功能:对options中的data的所有属性进行拦截
+			function MVVM(options){
+				//结构赋值传过来的options
+				const {data,el}=options
+				//遍历data的每个属性
+				//data=对象   key= 对象里的属性
+				for(let key in data){
+					//vue2.x中的双向数据拦截器
+					Object.defineProperty(this,key,{
+						//拦截里的设置
+						set(val){
+							if(val==data[key]){
+								return
+							}
+							//把参数赋值给data成员
+							data[key]=val;
+							//发布时间,所有观察者都去执行
+							ec.emit(key);
+						},
+						get(){
+							// console.log(`获取${key}`)
+							//返回这个对象
+							return data[key]
+						}
+					})
+				}
+				//解析模板
+				new Compiler(el,this)
+				//实现methods拷贝一份到vm中
+				Object.assign(this,)
+			}
+			//用来对模板进行解析，分析出哪个dom中需要显示数据初值
+			// el : 选择器 #app
+			// vm : 就是MVVM的实例
+			function Compiler(el,vm){
+				// 获取所有dom节点
+				this.dom = document.querySelector(el);
+				// 把传过来形参vm赋值给this.vm
+				this.vm=vm;
+				//调用compile函数
+				this.compile(this.dom)
+			}
+			Compiler.prototype.compile=function(dom){
+				//遍历dom,找所有dom节点
+				dom.childNodes.forEach(node=>{
+					//判断node返回的节点编号是3文本节点
+					if(node.nodeType===3){
+						//就调用文本节点处理函数
+						this.compileText(node)
+					}else if(node.nodeType===1){
+						//否则就调用元素节点处理函数
+						this.compileElement(node)
+						//如果是元素节点,还要进一步解析,递归调用
+						this.compile(node)
+					}
+				})
+			}
+			//文本节点处理函数
+			Compiler.prototype.compileText=function(dom){
+				//收集当前要观察的所有属性
+				var arrkeys = [];
+				//取出文本节点的内容
+				var str = dom.textContent
+				//通过正则替换,一定要用箭头函数不改变thi是指向
+				var newStr=str.replace(/{{(.+?)}}/g,(objstr,p1)=>{
+					//添加找到的元素push到arrkeys里面
+					arrkeys.push(p1)
+					//返回p1
+					return this.vm[p1]
+				});
+				//显示替换的结果
+				dom.textContent = newStr
+				//添加监听
+				arrkeys.forEach(key=>{
+					//给事件中心添加事件
+					ec.addListener(key,()=>{
+						//通过正则替换,要用箭头函数
+						var newStr =str.replace(/{{(.+?)}}/g,(objstr,p1)=>{
+							// 返回p1
+							return this.vm[p1]
+						});
+						//显示替换结果
+						dom.textContent = newStr
+					})
+				})
+			}
+			//元素节点处理函数
+			Compiler.prototype.compileElement=function(dom){
+				//检测是否有v-model属性
+				if(dom.hasAttribute("v-model")){
+					//取出属性值:
+					var key = dom.getAttribute("v-model");
+						//把对象中的key属性的值,显示在当前的input框中
+					dom.value= this.vm[key]
+					//添加监听者
+					//当key属性发生变化时,去更新input框中的值
+					ec.addListener(key,()=>{
+						dom.value = this.vm[key]
+					})
+					//给元素本身添加input事件
+					dom.addEventListener("input",(e)=>{
+						//获取当前用户修改后的值
+						//设置数据给回vm[key]
+						this.vm[key]=e.target.value
+					})
+				}
+			}
+		</script>
+		<script type="text/javascript">
+			var vm = new MVVM({
+				el:"#app",
+				data:{
+					salary:15000,
+					bonus:5000,
+					abc:500
+				}
+			})
+		</script>
+	</body>
+</html>
